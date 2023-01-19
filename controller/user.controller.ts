@@ -1,15 +1,10 @@
 'use strict'
 
-
 import { Request, Response } from "express"
 import { User, UserDb } from "../types"
 
 const db = require('../db')
 const bcrypt = require("bcrypt")
-
-const camelcase = (str: string) => {
-  return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase())
-}
 
 const toCamelcase = ({ id, status, email, registration_timestamp, last_login_timestamp, name }: UserDb) => {
   return {
@@ -60,7 +55,7 @@ class UserController {
       }
       const users: UserDb[] = (await db.query('SELECT * from users')).rows
       const camelCaseUsers = users.map(user => toCamelcase(user))
-      res.json(users)
+      res.json(camelCaseUsers)
     } catch (error) {
       console.log(error)
       res.status(500).json({ error: 'Server error' })
