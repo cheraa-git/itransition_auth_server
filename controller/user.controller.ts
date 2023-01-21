@@ -5,15 +5,14 @@ import { User, UserDb } from "../types"
 
 const db = require('../db')
 const bcrypt = require("bcrypt")
+var jwt = require('jsonwebtoken')
+const SECRET_KEY = process.env.PGPASSWORD
 
-const toCamelcase = ({ id, status, email, registration_timestamp, last_login_timestamp, name }: UserDb) => {
+const toCamelcase = (user: UserDb) => {
   return {
-    id,
-    name,
-    email,
-    registrationTimestamp: registration_timestamp,
-    lastLoginTimestamp: last_login_timestamp,
-    status
+    ...user,
+    registrationTimestamp: user.registration_timestamp,
+    lastLoginTimestamp: user.last_login_timestamp,
   } as User
 }
 
@@ -75,13 +74,13 @@ class UserController {
         return res.status(500).json({ error: 'Email already exists' })
       }
       const hashPassword = await bcrypt.hash(password, 10)
-
+      const token = jwt.sign(hashPassword, SECRET_KEY)
       const dateNow = `${Date.now()}`
-      const userData = [name, email, dateNow, dateNow, 'active', hashPassword]
+      const userData = [name, email, dateNow, dateNow, 'active', hashPassword, token]
       const newUser = await db.query(`
-                  INSERT INTO users (name, email, last_login_timestamp, registration_timestamp, status, password)
-                  values ($1, $2, $3, $4, $5, $6)
-                  RETURNING id, name, email, last_login_timestamp, registration_timestamp, status`,
+                  INSERT INTO users (name, email, last_login_timestamp, registration_timestamp, status, password, token)
+                  values ($1, $2, $3, $4, $5, $6, $7)
+                  RETURNING id, name, email, last_login_timestamp, registration_timestamp, status, token`,
         userData)
       res.json(toCamelcase(newUser.rows[0]))
     } catch (error) {
@@ -98,7 +97,6 @@ class UserController {
       const user = emailMatch[0]
 
       if (!email || !password) {
-        console.log(email, password)
         return res.status(500).json({ error: 'Registration data invalid' })
       }
 
@@ -115,19 +113,26 @@ class UserController {
         return res.status(500).json({ error: 'The user is blocked' })
       }
 
-      const uploadData = [`${Date.now()}`, user.id]
+      const token = jwt.sign(user.password, SECRET_KEY)
+      const uploadData = [`${Date.now()}`, token, user.id]
       let response = await db.query(`UPDATE users
-                                     set last_login_timestamp = $1
-                                     where id = $2
-                                     RETURNING id, name, email, last_login_timestamp, registration_timestamp, status`
+                                     set last_login_timestamp = $1, token = $2
+                                     where id = $3
+                                     RETURNING id, name, email, last_login_timestamp, registration_timestamp, status, token`
         , uploadData)
-      res.json(response.rows[0])
+      res.json(toCamelcase(response.rows[0]))
     } catch (error) {
       console.log(error)
       res.status(500).json({ error: 'Server error' })
     }
 
   }
+  async autoLogin(req: Request, res: Response) {
+    const token = req.body.token
+    const user = (await db.query('SELECT  id, name, email, last_login_timestamp, registration_timestamp, status, token from users where token = $1', [token])).rows[0]
+    res.json(user ? toCamelcase(user) : {})
+  }
 }
+
 
 module.exports = new UserController()

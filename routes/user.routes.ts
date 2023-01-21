@@ -9,5 +9,5 @@ router.put('/users', userController.setUsersState)
 router.delete('/users', userController.deleteUsers)
 router.post('/auth/signup', userController.registerUser)
 router.post('/auth/login', userController.loginUser)
-
+router.post('/auth/autologin', userController.autoLogin)
 module.exports = router

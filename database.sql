@@ -5,6 +5,7 @@ create TABLE users(
     last_login_timestamp VARCHAR(255),
     registration_timestamp VARCHAR(255),
     status VARCHAR(255),
-    password VARCHAR(255)
+    password VARCHAR(255),
+    token VARCHAR(255)
 );
 

@@ -5,6 +5,7 @@ export interface User {
   registrationTimestamp: string
   lastLoginTimestamp: string
   status: 'blocked' | 'active'
+  token: string
 }
 
 export interface UserDb {
@@ -15,5 +16,6 @@ export interface UserDb {
   last_login_timestamp: string
   status: 'blocked' | 'active'
   password: string
+  token: string
 }
 
